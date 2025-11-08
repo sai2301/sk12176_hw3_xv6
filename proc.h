@@ -33,7 +33,6 @@ struct context {
 };
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -53,6 +52,7 @@ struct proc {
   int nice;
   int base_priority;
   int eff_priority;
+  int wait_ticks;  
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -60,4 +60,5 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+// in proc.h (near other prototypes)
 int setnice(int pid, int value);

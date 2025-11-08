@@ -77,8 +77,7 @@ sys_sleep(void)
   return 0;
 }
 
-// return how many clock tick interrupts have occurred
-// since start.
+// return how many clock tick interrupts have occurred since start.
 int
 sys_uptime(void)
 {
@@ -90,15 +89,38 @@ sys_uptime(void)
   return xticks;
 }
 
-
+/* ---------------- HW3: nice(pid, value) ----------------
+   Supports:
+     - nice <value>           -> applies to current process
+     - nice <pid> <value>     -> applies to PID
+   Kernel enforces value range [0..4].
+   Returns previous nice on success, -1 on failure.
+*/
 int
 sys_nice(void)
 {
-  int pid, val;
+  int a0, a1;
+  int got0 = argint(0, &a0);
+  int got1 = argint(1, &a1);
 
-  if(argint(0, &pid) < 0 || argint(1, &val) < 0)
+  if(got0 < 0)
+    return -1;                 // at least one arg required
+
+  int pid, val;
+  if(got1 < 0){
+    // only one argument: treat as <value> for current process
+    pid = myproc()->pid;
+    val = a0;
+  } else {
+    // two arguments: <pid> <value>
+    pid = a0;
+    val = a1;
+  }
+
+  // hard range check in kernel
+  if (val < 0 || val > 4)
     return -1;
 
-  return setnice(pid, val);
+  extern int setnice(int pid, int value);  // in proc.c
+  return setnice(pid, val);                // returns previous nice or -1
 }
-

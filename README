@@ -1,114 +1,85 @@
-Implementation Overview
-1. Kernel Modifications
+# HW3 — Priority Scheduling and `nice` System Call
 
-Files changed:
+**Name:** Sai Krishna Kommineni  
+**NetID:** sk12176  
 
-proc.c, proc.h – added priority field to struct proc; modified scheduler() to pick the runnable process with the highest priority (lowest numeric value).
+---
 
-sysproc.c – implemented the system call sys_nice() that invokes setnice().
+## Overview
+This assignment extends the xv6 operating system to support **priority-based scheduling** and a new `nice` system call that allows processes to adjust their own or another process’s priority.  
+Additionally, an **aging mechanism** (extra credit) was implemented to ensure fair CPU sharing and prevent starvation of lower-priority processes.
 
-syscall.c, syscall.h, user.h – registered the new syscall.
+---
 
-nice.c – user program implementing the nice command.
+## Implemented Features
 
-Priority model:
+### 1. Priority Scheduling
+- Added fields to each process:
+  - `nice` — user-assigned value (0–4)
+  - `base_priority` — derived from `nice`
+  - `eff_priority` — effective priority used by the scheduler
+  - `wait_ticks` — counter for aging
+- The scheduler selects the process with the **lowest `eff_priority`** (0 = highest priority).
+- Tie-breaking is done by **PID** (lower PID wins).
 
-Priority values range from 0 (highest) to 4 (lowest).
+### 2. `nice` System Call
+- **Prototype:** `int nice(int pid, int value)`
+- **Usage:**
+  - `nice <value>` → change the current process’s priority.
+  - `nice <pid> <value>` → change another process’s priority.
+- Returns the **previous nice value** on success, `-1` on error.
+- Handles both **invalid PIDs** and **out-of-range values (0–4)** gracefully.
 
-Default priority = 2.
+### 3. Aging (Extra Credit)
+- Implemented aging to gradually boost waiting processes.
+- After every `AGING_INTERVAL = 50` ticks, each RUNNABLE process’s `eff_priority` improves (decreases numerically).
+- Prevents starvation by ensuring long-waiting processes eventually run.
 
-Each call to nice adjusts a process’s priority either for the current process or a target PID.
+---
 
-2. Scheduler Policy
+## Modified Files
 
-Modified the Round-Robin scheduler in proc.c to:
+| File | Description |
+|------|--------------|
+| `proc.h` | Added new fields for priority and aging. |
+| `proc.c` | Implemented scheduling logic, aging, and helper `setnice()`. |
+| `sysproc.c` | Added kernel handler for `nice` syscall. |
+| `syscall.c`, `syscall.h`, `usys.S`, `user.h` | Registered the new syscall. |
+| `nice.c` | New user-space program to modify process priorities. |
+| `Makefile` | Added `_nice`, `_test1`, `_test2`, `_test3` to `UPROGS`. |
 
-Iterate through all RUNNABLE processes.
+---
 
-Select the process with the smallest priority value.
+## How to Build and Run
 
-Break ties with normal Round-Robin order.
+```bash
+make clean
+make CPUS=1 qemu-nox
+Then, in the xv6 shell:
 
-Keep per-priority fairness using time slices.
+bash
+Copy code
+test1
+test2
+test3
+Manual Verification
+bash
+Copy code
+burn &; burn &; burn &
+ps
+nice <pid> <value>
+Expected Behavior
+Processes with lower nice values (higher priority) receive more CPU time.
 
-3. System Call
-int nice(int pid, int value);
+Invalid PIDs and out-of-range nice values are safely rejected.
 
+Long-waiting processes automatically improve in priority due to aging.
 
-pid = -1 or omitted → modifies current process priority.
+All provided test programs (test1, test2, test3) pass successfully.
 
-Returns: 0 on success, -1 on invalid PID or value.
+Notes
+Use CPUS=1 for deterministic results.
 
-Valid range for value: 0..4 (checked inside setnice()).
+Use Ctrl+P to print process states and priorities.
 
-The syscall does not clamp invalid values—invalid inputs are rejected.
-
-🧪 User Programs
-nice.c
-
-Command-line interface to modify priority:
-
-$ nice <pid> <value>
-$ nice <value>
-
-
-Examples:
-
-$ nice 6 0
-6 2
-$ nice 8 4
-8 2
-$ nice 999 2
-nice: failed for pid 999
-
-test1.c — Syscall Validation
-
-Verifies self-priority change.
-
-Checks invalid PID handling.
-
-Ensures out-of-range values are correctly rejected.
-Output:
-
-OK: self pid=3 old=2 new=3
-OK: invalid pid handled
-OK: out-of-range handled
-
-test2.c — Priority Scheduling Behavior
-
-Spawns 3 CPU-bound worker processes at priorities 0, 2, and 4.
-
-Confirms that higher priority completes more iterations within a fixed time window.
-Output:
-
-[TEST2] duration=300 ticks
-[TEST2] set priorities: pid 5->0, pid 6->2, pid 7->4
-worker pid=5 done=5554
-worker pid=6 done=5671
-worker pid=7 done=5658
-[TEST2] done. Expect roughly: work(pid=5) > work(pid=6) > work(pid=7)
-
-test3.c — Dynamic Renicing
-
-Demonstrates dynamic reprioritization while processes are running.
-Output:
-
-[TEST3] start
-renice: A old=4->0  B old=4->2
-[TEST3] done
-
-
-(minor “exec fail” lines are harmless test helpers)
-
-⚙️ Build & Run Instructions
-Build
-make clean && make qemu-nox
-
-Inside xv6
-$ test1
-$ test2
-$ test3
-
-To quit QEMU
-
-Press Ctrl-A, then X.
+The design preserves all original xv6 functionality while adding fair priority scheduling.

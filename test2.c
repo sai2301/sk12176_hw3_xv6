@@ -33,7 +33,7 @@ worker(int dur_ticks) {
 
 int
 main(int argc, char *argv[]) {
-  int dur = 300; // ~3 seconds (100 ticks/sec in xv6)
+  int dur = 1000; 
   if (argc > 1) dur = atoi(argv[1]);
 
   printf(1, "\n[TEST2] duration=%d ticks\n", dur);

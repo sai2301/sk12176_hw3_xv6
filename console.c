@@ -227,8 +227,15 @@ consoleintr(int (*getc)(void))
     }
   }
   release(&cons.lock);
-  if(doprocdump) {
-    procdump();  // now call procdump() wo. cons.lock held
+
+  // Show a header before the dump so HW3 priority fields are readable.
+  if(doprocdump){
+#ifdef PRIORITY_SCHED
+    cprintf("PID STATE NAME  prio=E(base=B)\n");
+#else
+    cprintf("PID STATE NAME\n");
+#endif
+    procdump();  // now call procdump() w/o cons.lock held
   }
 }
 
@@ -296,4 +303,3 @@ consoleinit(void)
 
   ioapicenable(IRQ_KBD, 0);
 }
-
