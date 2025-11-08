@@ -90,9 +90,6 @@ sys_uptime(void)
   return xticks;
 }
 
-// -------- HW3: nice(pid, value) --------
-// We call into a proc.c helper so sysproc.c doesn't touch ptable directly.
-extern int proc_setnice(int pid, int val);
 
 int
 sys_nice(void)
@@ -102,9 +99,6 @@ sys_nice(void)
   if(argint(0, &pid) < 0 || argint(1, &val) < 0)
     return -1;
 
-  // clamp to [0,4] for 5 levels (0 = highest priority)
-  if(val < 0) val = 0;
-  if(val > 4) val = 4;
-
- return setnice(pid, val); // returns old nice on success, -1 on failure
+  return setnice(pid, val);
 }
+

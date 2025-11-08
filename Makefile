@@ -184,6 +184,7 @@ UPROGS=\
 	_burn\
 	_primework\
 	_test1\
+	_test2\
 	_test3\
 
 
